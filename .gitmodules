@@ -1,0 +1,6 @@
+[submodule "reference/mcu_framework"]
+	path = reference/mcu_framework
+	url = https://github.com/ZxyKira/mcu_framework.git
+[submodule "reference/tool_timer_scheduler"]
+	path = reference/tool_timer_scheduler
+	url = https://github.com/ZxyKira/tool_timer_scheduler.git
