@@ -55,8 +55,7 @@ extern "C" {
 /*----------------------------------------
  *  TOOL_BUTTON_VERSION
  *----------------------------------------*/
-#define TOOL_BUTTON_VERSION VERSION_DEFINE(1, 0, 0)
-
+#define TOOL_BUTTON_VERSION VERSION_DEFINE(0, 1, 0)
 
 
 /* *****************************************************************************************
@@ -78,13 +77,16 @@ typedef void (*tool_button_execute_t)(void* attachment, uint32_t mode);
  */ 
 
 struct tool_button_api_t{
-  bool     (*init)       (tool_button_handle_t* _this, tool_timer_scheduler_handle_t* timerScheduler, fw_io_pin_handle_t* pin);
-	bool     (*isEnable)   (tool_button_handle_t* _this);
-	bool     (*addMode)    (tool_button_handle_t* _this, uint32_t mode);
-	bool     (*removeMode) (tool_button_handle_t* _this, uint32_t mode);
-	bool     (*start)      (tool_button_handle_t* _this, uint32_t msBaseTime, uint32_t msTimeout);
-	bool     (*stop)       (tool_button_handle_t* _this);
-	bool     (*isStart)    (tool_button_handle_t* _this);
+  bool     (*init)          (tool_button_handle_t* _this, tool_timer_scheduler_handle_t* timerScheduler, fw_io_pin_handle_t* pin);
+	bool     (*isEnable)      (tool_button_handle_t* _this);
+	bool     (*addMode)       (tool_button_handle_t* _this, uint32_t mode);
+	bool     (*removeMode)    (tool_button_handle_t* _this, uint32_t mode);
+	bool     (*start)         (tool_button_handle_t* _this, tool_button_execute_t execute, void* attachment, uint32_t msScanTime);
+	bool     (*stop)          (tool_button_handle_t* _this);
+	bool     (*isStart)       (tool_button_handle_t* _this);
+	bool     (*setTimeout)    (tool_button_handle_t* _this, uint32_t msTimeout);
+	bool     (*setBaseTime)   (tool_button_handle_t* _this, uint32_t msBaseTime);
+	bool     (*setHighEnable) (tool_button_handle_t* _this, bool enable);
 };
 
 
@@ -96,13 +98,20 @@ struct tool_button_api_t{
  *  tool_button_handle_t
  *----------------------------------------*/
 typedef struct _tool_button_handle_t{
+	uint32_t enableFlag;
+
+	struct{
+	  tool_timer_scheduler_handle_t* timerScheduler;
+		fw_io_pin_handle_t* pin;
+	}reference;	
+	
 	struct{
 		uint32_t cache;
-		uint32_t pressDownCount;
-		uint32_t pressUpCount;
+		uint32_t pressCount;
+		uint32_t timeoutDownCount;
 		uint16_t magnification;
 	  uint8_t  modeMask;
-		uint8_t  reserved;
+		uint8_t  level;
 	}handle;
 	
 	struct{
@@ -112,12 +121,10 @@ typedef struct _tool_button_handle_t{
 		uint32_t timeout;
 		void* attachment;
 		tool_button_execute_t execute;
+		uint8_t modeEnable;
+		bool highEnable;
 	}config;
 	
-	struct{
-	  tool_timer_scheduler_handle_t* timerScheduler;
-		fw_io_pin_handle_t* pin;
-	}reference;
 }tool_button_handle_t;
 
 
