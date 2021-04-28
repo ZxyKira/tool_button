@@ -133,17 +133,17 @@ static uint8_t tool_button_getModeBitCount(uint32_t value, uint8_t level){
 static uint8_t tool_button_foundMatch(uint32_t* mode, uint8_t mask, uint8_t value, uint8_t level){
   int i;
   uint8_t result = 0;
-  uint8_t minValue = 0xFF;
+  uint8_t minValue = 0;
 
   for(i=0; i<8; i++){
     if((mask & (1 << i))){  //mode mask bit is enable
-      uint8_t valueRead = tool_button_getModeBitCount(mode[i], level);
+      uint8_t valueMode = tool_button_getModeBitCount(mode[i], level);
       
-      if(valueRead >= value){
+      if(value >= valueMode){
         
-        if(valueRead == value){
+        if(value == valueMode){
           
-          if(minValue == valueRead)
+          if(minValue == valueMode)
             result |= (1<<i);
           
           else{
@@ -154,14 +154,14 @@ static uint8_t tool_button_foundMatch(uint32_t* mode, uint8_t mask, uint8_t valu
           
         }else{
           
-          if(minValue >= valueRead){
+          if(valueMode >= minValue){
             
-            if(minValue == valueRead)
+            if(valueMode == minValue)
               result |= (1<<i);
             
             else{
               result = (1<<i);
-              minValue = valueRead;
+              minValue = valueMode;
             }
           }
         }
@@ -191,7 +191,7 @@ static uint32_t tool_button_getModeValue(tool_button_handle_t* _this){
 			result = tool_button_getModeLevel(_this->config.mode[i]);
 			
 			if(result == level)
-				return result;
+				return _this->config.mode[i];
 			
 		}
 	}
@@ -213,7 +213,7 @@ static void tool_button_timer_event(void* attachment){
     _this->handle.pressCount++;
 		
   }else{  //button not pressing
-		if(!_this->handle.timeoutCount){  //timeout count == 0
+		if((_this->handle.timeoutCount == 0) & (_this->handle.pressCount != 0)){  //timeout count == 0
 			
 			uint8_t value = (_this->handle.pressCount / _this->handle.magnification);
 			_this->handle.modeMask &= tool_button_foundMatch(_this->config.mode, _this->handle.modeMask, value, _this->handle.level);
@@ -226,7 +226,7 @@ static void tool_button_timer_event(void* attachment){
 				_this->handle.timeoutCount++;
 		}
 		
-		if(_this->handle.timeoutCount >= (_this->config.timeout * _this->handle.magnification)){  // is timeout
+		if(_this->handle.timeoutCount >= (_this->config.timeout / _this->config.scanTime)){  // is timeout
 			
 			uint32_t mode = tool_button_getModeValue(_this);
 			if(mode)
@@ -270,7 +270,7 @@ bool tool_button_init(tool_button_handle_t* _this, tool_timer_scheduler_handle_t
   _this->reference.pin = pin;
   _this->reference.timerScheduler = timerScheduler;
   _this->config.baseTime = 100;
-  _this->config.timeout = 500;
+  _this->config.timeout = 300;
   
   return true;
 }
@@ -362,7 +362,7 @@ bool tool_button_isStart(tool_button_handle_t* _this){
 /*----------------------------------------
  *  tool_button_start
  *----------------------------------------*/
-bool tool_button_start(tool_button_handle_t* _this, uint32_t msBaseTime, tool_button_execute_t execute, void* attachment, uint32_t msScanTime){
+bool tool_button_start(tool_button_handle_t* _this, tool_button_execute_t execute, void* attachment, uint32_t msScanTime){
   if(tool_button_isStart(_this))
     return false;
 

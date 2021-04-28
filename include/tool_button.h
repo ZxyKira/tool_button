@@ -142,7 +142,7 @@ extern bool tool_button_isEnable(tool_button_handle_t* _this);
 extern bool tool_button_addMode(tool_button_handle_t* _this, uint32_t mode);
 extern bool tool_button_removeMode(tool_button_handle_t* _this, uint32_t mode);
 extern bool tool_button_isStart(tool_button_handle_t* _this);
-extern bool tool_button_start(tool_button_handle_t* _this, uint32_t msBaseTime, tool_button_execute_t execute, void* attachment, uint32_t msScanTime);
+extern bool tool_button_start(tool_button_handle_t* _this, tool_button_execute_t execute, void* attachment, uint32_t msScanTime);
 extern bool tool_button_stop(tool_button_handle_t* _this);
 extern bool tool_button_setTimeout(tool_button_handle_t* _this, uint32_t msTimeout);
 extern bool tool_button_setBaseTime(tool_button_handle_t* _this, uint32_t msBaseTime);
