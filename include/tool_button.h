@@ -108,7 +108,7 @@ typedef struct _tool_button_handle_t{
 	struct{
 		uint32_t cache;
 		uint32_t pressCount;
-		uint32_t timeoutDownCount;
+		uint32_t timeoutCount;
 		uint16_t magnification;
 	  uint8_t  modeMask;
 		uint8_t  level;
@@ -137,6 +137,16 @@ typedef struct _tool_button_handle_t{
  *    Extern
  */ 
 
+extern bool tool_button_init(tool_button_handle_t* _this, tool_timer_scheduler_handle_t* timerScheduler, fw_io_pin_handle_t* pin);
+extern bool tool_button_isEnable(tool_button_handle_t* _this);
+extern bool tool_button_addMode(tool_button_handle_t* _this, uint32_t mode);
+extern bool tool_button_removeMode(tool_button_handle_t* _this, uint32_t mode);
+extern bool tool_button_isStart(tool_button_handle_t* _this);
+extern bool tool_button_start(tool_button_handle_t* _this, uint32_t msBaseTime, tool_button_execute_t execute, void* attachment, uint32_t msScanTime);
+extern bool tool_button_stop(tool_button_handle_t* _this);
+extern bool tool_button_setTimeout(tool_button_handle_t* _this, uint32_t msTimeout);
+extern bool tool_button_setBaseTime(tool_button_handle_t* _this, uint32_t msBaseTime);
+extern bool tool_button_setHighEnable(tool_button_handle_t* _this, bool enable);
 
 
 #ifdef __cplusplus

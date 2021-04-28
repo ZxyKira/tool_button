@@ -58,9 +58,9 @@
  *  tool_button_reset_handle
  *----------------------------------------*/
 static void inline tool_button_reset_handle(tool_button_handle_t* _this){
-	memset(&_this->handle, 0x00, sizeof(_this->handle));
+  memset(&_this->handle, 0x00, sizeof(_this->handle));
   _this->handle.magnification = _this->config.baseTime / _this->config.scanTime;
-	_this->handle.modeMask = _this->config.modeEnable;
+  _this->handle.modeMask = _this->config.modeEnable;
 }
 
 
@@ -70,8 +70,8 @@ static void inline tool_button_reset_handle(tool_button_handle_t* _this){
  *----------------------------------------*/
 static uint8_t tool_button_getModeLevel(uint32_t value){
   if(!value)
-    return 0;	
-	
+    return 0;  
+  
   int bitCount = 0;
   int levelCount = 1;
   
@@ -82,7 +82,7 @@ static uint8_t tool_button_getModeLevel(uint32_t value){
     if((value & 0x00000001)){
       bitCount++;  
     }else{
-    	
+      
       if(bitCount)
         levelCount++;
         
@@ -128,27 +128,75 @@ static uint8_t tool_button_getModeBitCount(uint32_t value, uint8_t level){
 }
 
 /*----------------------------------------
- *  tool_button_valueCompair
+ *  tool_button_fountMatch
  *----------------------------------------*/
-static bool tool_button_valueCompair(tool_button_handle_t* _this, uint32_t value){
-  uint32_t realValue = (value / _this->handle.magnification);
+static uint8_t tool_button_foundMatch(uint32_t* mode, uint8_t mask, uint8_t value, uint8_t level){
+  int i;
+  uint8_t result = 0;
+  uint8_t minValue = 0xFF;
+
+  for(i=0; i<8; i++){
+    if((mask & (1 << i))){  //mode mask bit is enable
+      uint8_t valueRead = tool_button_getModeBitCount(mode[i], level);
+      
+      if(valueRead >= value){
+        
+        if(valueRead == value){
+          
+          if(minValue == valueRead)
+            result |= (1<<i);
+          
+          else{
+            
+            minValue = value;
+            result = (1<<i);
+          }
+          
+        }else{
+          
+          if(minValue >= valueRead){
+            
+            if(minValue == valueRead)
+              result |= (1<<i);
+            
+            else{
+              result = (1<<i);
+              minValue = valueRead;
+            }
+          }
+        }
+      }
+    }
+  }
+  return result;
 }
 
 
+
 /*----------------------------------------
- *  tool_button_hasNextLevel
+ *  tool_button_getModeNumber
  *----------------------------------------*/
-static bool tool_button_hasNextLevel(tool_button_handle_t* _this, uint8_t level){
-  int i, j;
+static uint32_t tool_button_getModeValue(tool_button_handle_t* _this){
+	uint32_t result = 0;	
+	
+	if(!_this->handle.modeMask)
+		return result;
+	
+	uint8_t level = _this->handle.level;
+
+	int i;
 	
 	for(i=0; i<8; i++){
-	  if(_this->handle.modeMask & (1 << i)){
-			if(tool_button_getModeBitCount(_this->config.mode[i], level))
-				return true;
+		if((_this->handle.modeMask & (1 << i))){
+			result = tool_button_getModeLevel(_this->config.mode[i]);
+			
+			if(result == level)
+				return result;
+			
 		}
 	}
 	
-	return false;
+	return result;
 }
 
 
@@ -159,12 +207,35 @@ static bool tool_button_hasNextLevel(tool_button_handle_t* _this, uint8_t level)
 static void tool_button_timer_event(void* attachment){
   tool_button_handle_t* _this = attachment;
   
-  if(_this->reference.pin->api->getValue(_this->reference.pin) == _this->config.highEnable){ //pressing
-		_this->handle.pressCount++;
-	}else{
-	
-	
-	}
+  if(_this->reference.pin->api->getValue(_this->reference.pin) == _this->config.highEnable){ //button pressing
+		
+		_this->handle.timeoutCount = 0;
+    _this->handle.pressCount++;
+		
+  }else{  //button not pressing
+		if(!_this->handle.timeoutCount){  //timeout count == 0
+			
+			uint8_t value = (_this->handle.pressCount / _this->handle.magnification);
+			_this->handle.modeMask &= tool_button_foundMatch(_this->config.mode, _this->handle.modeMask, value, _this->handle.level);
+			_this->handle.level++;
+			_this->handle.timeoutCount++;
+			
+		}else{  //timeout timer != 0
+			
+			if(_this->handle.level)
+				_this->handle.timeoutCount++;
+		}
+		
+		if(_this->handle.timeoutCount >= (_this->config.timeout * _this->handle.magnification)){  // is timeout
+			
+			uint32_t mode = tool_button_getModeValue(_this);
+			if(mode)
+				_this->config.execute(_this->config.attachment, mode);
+			
+			//reset handle memory
+			tool_button_reset_handle(_this);
+		}
+  }
   
   bool result = tool_timer_scheduler_schedule(_this->reference.timerScheduler, tool_button_timer_event, _this, _this->config.scanTime);
   if(!result)
@@ -237,7 +308,7 @@ bool tool_button_addMode(tool_button_handle_t* _this, uint32_t mode){
 
     if(!_this->config.mode[i]){
       _this->config.mode[i] = mode;
-			_this->config.modeEnable |= (1 << i);
+      _this->config.modeEnable |= (1 << i);
       return true;
     }
   }
@@ -263,7 +334,7 @@ bool tool_button_removeMode(tool_button_handle_t* _this, uint32_t mode){
     
     if(_this->config.mode[i] == mode){
       _this->config.mode[i] = 0;
-			_this->config.modeEnable &= ~(1 << i);
+      _this->config.modeEnable &= ~(1 << i);
       return true;
     }
   }
@@ -302,7 +373,7 @@ bool tool_button_start(tool_button_handle_t* _this, uint32_t msBaseTime, tool_bu
   _this->config.attachment = attachment;
   _this->config.scanTime = msScanTime;
 
-	tool_button_reset_handle(_this);
+  tool_button_reset_handle(_this);
   
   bool result = tool_timer_scheduler_schedule(_this->reference.timerScheduler, tool_button_timer_event, _this, _this->config.scanTime);
   
@@ -380,4 +451,3 @@ bool tool_button_setHighEnable(tool_button_handle_t* _this, bool enable){
 /* *****************************************************************************************
  *    End of file
  */
- 
